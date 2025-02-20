@@ -100,7 +100,7 @@ check_cncli_send_tip() {
 
     # Check if the json success message exists in the captured log
     if echo "$pt_log_entry" | grep -q $json_success_status; then
-        echo -e "Healthy: Tip sent to Pooltool. (Current tip = $SECOND_TIP)."
+        echo "Healthy: Tip sent to Pooltool. (Current tip = $SECOND_TIP)."
         return 0  # Return 0 if the success message is found
     # Check if the json failure message exists in the captured log
     elif echo "$pt_log_entry" | grep -q $json_failure_status; then
