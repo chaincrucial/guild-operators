@@ -79,17 +79,17 @@ check_cncli_send_tip() {
     }
 
     # Get the current tip from the node
-    FIRST_TIP=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
+    first_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # Capture the next output from cncli that is related to Pooltool
     pt_log_entry=$(timeout $log_entry_timeout cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
     # Get the current tip again
-    SECOND_TIP=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
+    second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     if [ -z "$pt_log_entry" ]; then
-        if [[ "$FIRST_TIP" -eq "$SECOND_TIP" ]]; then
-            echo "Unable to capture cncli output within $log_entry_timeout seconds, but node has not moved tip. (Current tip = $SECOND_TIP)."
+        if [[ "$first_tip" -eq "$second_tip" ]]; then
+            echo "Unable to capture cncli output within $log_entry_timeout seconds, but node has not moved tip. (Current tip = $second_tip)."
             return 0
         else
-            echo "Unable to capture cncli output within $log_entry_timeout seconds. (Current tip = $SECOND_TIP)."
+            echo "Unable to capture cncli output within $log_entry_timeout seconds. (Current tip = $second_tip)."
             return 1  # Return 1 if the output capture fails
         fi
     fi
@@ -100,17 +100,17 @@ check_cncli_send_tip() {
 
     # Check if the json success message exists in the captured log
     if echo "$pt_log_entry" | grep -q $json_success_status; then
-        echo "Healthy: Tip sent to Pooltool. (Current tip = $SECOND_TIP)."
+        echo "Healthy: Tip sent to Pooltool. (Current tip = $second_tip)."
         return 0  # Return 0 if the success message is found
     # Check if the json failure message exists in the captured log
     elif echo "$pt_log_entry" | grep -q $json_failure_status; then
         failure_message=$(echo "$pt_log_entry" | grep -oP '"message":"\K[^"]+')
-        echo "Failed to send tip. (Current tip = $SECOND_TIP). $failure_message"
+        echo "Failed to send tip. (Current tip = $second_tip). $failure_message"
         return 1  # Return 1 if the failure message is found
     # If the log entry does not contain a json success or failure message
     else
         # Log the raw output if no json message is found
-        echo "Failed to send tip. (Current tip = $SECOND_TIP). $pt_log_entry"
+        echo "Failed to send tip. (Current tip = $second_tip). $pt_log_entry"
         return 1  # Return 1 if it fails for any other reason
     fi
 }
