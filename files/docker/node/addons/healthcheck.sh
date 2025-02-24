@@ -89,10 +89,10 @@ check_cncli_send_tip() {
         tip_difference=$((second_tip - first_tip))
         if [[ "$tip_difference" -le "$tip_allowed_drift" ]]; then
             echo "Node tip didn't move before the healthcheck timeout was reached. (Current tip = $second_tip)."
-            return 0
+            return 0  # Return 0 if the tip didn't move
         else
             echo "Unable to capture cncli output before the healthcheck timeout was reached. (Current tip = $second_tip)."
-            return 1  # Return 1 if the output capture fails
+            return 1  # Return 1 if the tip did move
         fi
     fi
 
