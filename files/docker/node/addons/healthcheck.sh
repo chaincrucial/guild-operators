@@ -85,7 +85,9 @@ check_cncli_send_tip() {
     # Get the current tip again
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     if [ -z "$pt_log_entry" ]; then
-        if [[ "$first_tip" -eq "$second_tip" ]]; then
+        tip_allowed_drift=3 # Allowable difference between first_tip and second_tip
+        tip_difference=$((second_tip - first_tip))
+        if [[ "$tip_difference" -le "$tip_allowed_drift" ]]; then
             echo "Unable to capture cncli output within $log_entry_timeout seconds, but node has not moved tip. (Current tip = $second_tip)."
             return 0
         else
