@@ -69,9 +69,6 @@ check_cncli_db() {
 
 # Function to check if the tip is successfully being sent to Pooltool
 check_cncli_send_tip() {
-    # Timeout in seconds for capturing the log entry
-    log_entry_timeout=99
-
     # Get the process ID of cncli
     process_id=$(pgrep -of cncli) || {
         echo "Error: cncli process not found."
@@ -80,10 +77,13 @@ check_cncli_send_tip() {
 
     # Get the current tip from the node
     first_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
+    # log capturing will timeout just before the container healthcheck times out at 120 seconds
+    log_entry_timeout=119
     # Capture the next output from cncli that is related to Pooltool
     pt_log_entry=$(timeout $log_entry_timeout cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
     # Get the current tip again
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
+    # If no output was captured...
     if [ -z "$pt_log_entry" ]; then
         tip_allowed_drift=3 # Allowable difference between first_tip and second_tip
         tip_difference=$((second_tip - first_tip))
