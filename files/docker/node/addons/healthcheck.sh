@@ -85,9 +85,9 @@ check_cncli_send_tip() {
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # If no output was captured...
     if [ -z "$pt_log_entry" ]; then
-        tip_allowed_drift=3 # Allowable difference between first_tip and second_tip
+        tip_allowed_difference=3 # Allowable difference between first_tip and second_tip
         tip_difference=$((second_tip - first_tip))
-        if [[ "$tip_difference" -le "$tip_allowed_drift" ]]; then
+        if [[ "$tip_difference" -le "$tip_allowed_difference" ]]; then
             echo "Node tip didn't move before the healthcheck timeout was reached. (Current tip = $second_tip)."
             return 0  # Return 0 if the tip didn't move
         else
