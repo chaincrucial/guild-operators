@@ -13,6 +13,7 @@ HEALTHCHECK_RETRY_WAIT="${HEALTHCHECK_RETRY_WAIT:-3}"           # The time (in s
 DB_SYNC_ALLOWED_DRIFT="${DB_SYNC_ALLOWED_DRIFT:-3600}"          # The allowed drift in seconds for the DB to be considered in sync
 CNCLI_DB_ALLOWED_DRIFT="${CNCLI_DB_ALLOWED_DRIFT:-300}"         # The allowed drift in slots for the CNCLI DB to be considered in sync
 CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capturing timeout (should one second be lower than container healthcheck '--timeout', which defaults to 120)
+CNCLI_SENDTIP_ALLOWED_DIFF="${CNCLI_SENDTIP_ALLOWED_DIFF:-3}"   # The allowable difference of the tip moving before it's sent to Pooltool. (Not every tip progression is sent to Pooltool)
 
 ######################################
 # Do NOT modify code below           #
@@ -84,9 +85,8 @@ check_cncli_sendtip() {
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # If no output was captured...
     if [ -z "$pt_log_entry" ]; then
-        tip_allowed_difference=3 # Allowable difference between first_tip and second_tip
         tip_difference=$((second_tip - first_tip))
-        if [[ "$tip_difference" -le "$tip_allowed_difference" ]]; then
+        if [[ "$tip_difference" -le "$CNCLI_SENDTIP_ALLOWED_DIFF" ]]; then
             echo "Node tip didn't move before the healthcheck timeout was reached. (Current tip = $second_tip)."
             return 0  # Return 0 if the tip didn't move
         else
