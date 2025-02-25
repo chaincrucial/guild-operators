@@ -68,7 +68,7 @@ check_cncli_db() {
 
 
 # Function to check if the tip is successfully being sent to Pooltool
-check_cncli_send_tip() {
+check_cncli_sendtip() {
     # Get the process ID of cncli
     process_id=$(pgrep -of cncli) || {
         echo "Error: cncli process not found."
