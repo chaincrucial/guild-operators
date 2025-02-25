@@ -12,6 +12,7 @@ HEALTHCHECK_RETRIES="${HEALTHCHECK_RETRIES:-20}"                # The number of 
 HEALTHCHECK_RETRY_WAIT="${HEALTHCHECK_RETRY_WAIT:-3}"           # The time (in seconds) to wait between retries
 DB_SYNC_ALLOWED_DRIFT="${DB_SYNC_ALLOWED_DRIFT:-3600}"          # The allowed drift in seconds for the DB to be considered in sync
 CNCLI_DB_ALLOWED_DRIFT="${CNCLI_DB_ALLOWED_DRIFT:-300}"         # The allowed drift in slots for the CNCLI DB to be considered in sync
+CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capturing timeout (should one second be lower than container healthcheck '--timeout', which defaults to 120)
 
 ######################################
 # Do NOT modify code below           #
@@ -77,10 +78,8 @@ check_cncli_sendtip() {
 
     # Get the current tip from the node
     first_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
-    # log capturing will timeout just before the container healthcheck times out at 120 seconds
-    log_entry_timeout=119
     # Capture the next output from cncli that is related to Pooltool
-    pt_log_entry=$(timeout $log_entry_timeout cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
+    pt_log_entry=$(timeout $CNCLI_SENDTIP_LOG_TIMEOUT cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
     # Get the current tip again
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # If no output was captured...
