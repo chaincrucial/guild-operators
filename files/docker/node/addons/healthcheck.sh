@@ -213,8 +213,8 @@ check_process() {
 
 
 check_tip() {
-    TIP=$1
-    DB_TIP=$2
+    TIP_X=$1
+    TIP_Y=$2
     ALLOWED_DRIFT=$3
 
     if [[ $(( TIP - DB_TIP )) -le ${ALLOWED_DRIFT} ]]; then
