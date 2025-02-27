@@ -44,7 +44,7 @@ check_cncli() {
             return 1
         fi
     else
-        if check_cncli_send_tip; then
+        if check_cncli_sendtip; then
             return 0
         else
             return 1
