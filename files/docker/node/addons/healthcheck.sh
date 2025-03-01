@@ -42,12 +42,11 @@ check_cncli() {
 
     case "${cncli_subcmd}" in
         sync )
-            check_cncli_db ;;
+            check_db_sync ;;
         ptsendtip )
             check_cncli_sendtip ;;
         * )
-            echo "Error: unknown cncli.sh subcommand: \"${cncli_subcmd}\"" >&2
-            return 1 ;;
+            check_cncli_db ;;
     esac
 }
 
