@@ -7,13 +7,13 @@
 ######################################
 
 ENTRYPOINT_PROCESS="${ENTRYPOINT_PROCESS:-cnode.sh}"            # Get the script from ENTRYPOINT_PROCESS or default to "cnode.sh" if not set
-HEALTHCHECK_CPU_THRESHOLD="${HEALTHCHECK_CPU_THRESHOLD:-80}"    # The CPU threshold to warn about if the sidecar process exceeds this for more than 60 seconds, defaults to 80%.
+HEALTHCHECK_CPU_THRESHOLD="${HEALTHCHECK_CPU_THRESHOLD:-80}"    # The CPU threshold to warn about if the sidecar process exceeds this for more than 60 seconds, defaults to 80%
 HEALTHCHECK_RETRIES="${HEALTHCHECK_RETRIES:-20}"                # The number of retries if tip is not incrementing, or cpu usage is over the threshold
 HEALTHCHECK_RETRY_WAIT="${HEALTHCHECK_RETRY_WAIT:-3}"           # The time (in seconds) to wait between retries
 DB_SYNC_ALLOWED_DRIFT="${DB_SYNC_ALLOWED_DRIFT:-3600}"          # The allowed drift in seconds for the DB to be considered in sync
 CNCLI_DB_ALLOWED_DRIFT="${CNCLI_DB_ALLOWED_DRIFT:-300}"         # The allowed drift in slots for the CNCLI DB to be considered in sync
-CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capturing timeout (should one second be lower than container healthcheck '--timeout', which defaults to 120)
-CNCLI_SENDTIP_ALLOWED_DRIFT="${CNCLI_SENDTIP_ALLOWED_DRIFT:-3}" # The allowable difference of the tip moving before it's sent to Pooltool. (Not every tip progression is sent to Pooltool)
+CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capture timeout (should be one second lower than container healthcheck '--timeout', which defaults to 120)
+CNCLI_SENDTIP_ALLOWED_DRIFT="${CNCLI_SENDTIP_ALLOWED_DRIFT:-3}" # How much the tip is allowed to move without it being sent to PoolTool (Not every tip progression is sent to Pooltool)
 
 ######################################
 # Do NOT modify code below           #
@@ -33,6 +33,9 @@ PROCESS_TO_HEALTHCHECK=(
 )
 
 # FUNCTIONS
+
+
+# Function to start the relevant health check based on the subcommand of cncli.sh
 check_cncli() {
     cncli_pid=$(pgrep -f "${ENTRYPOINT_PROCESS}")
     cncli_subcmd=$(ps -p "${cncli_pid}" -o cmd= | awk '{print $NF}')
@@ -49,6 +52,7 @@ check_cncli() {
 }
 
 
+# Function to check if the cncli sqlite db is in sync with the node
 check_cncli_db() {
     CCLI=$(which cardano-cli)
     SQLITE=$(which sqlite3)
@@ -112,6 +116,7 @@ check_cncli_sendtip() {
 }
 
 
+# Function to check if the db-sync postgres db is in sync with the node
 check_db_sync() {
     # Check if the DB is in sync
     [[ -z "${PGPASSFILE}" ]] && PGPASSFILE="${CNODE_HOME}/priv/.pgpass"
@@ -178,6 +183,7 @@ check_node() {
     fi
 }
 
+
 # Function to check if a process is running and its CPU usage
 check_process() {
     local process_name="$1"
@@ -208,6 +214,7 @@ check_process() {
 }
 
 
+# Function to compare the difference between two tips
 check_tip() {
     TIP_X=$1
     TIP_Y=$2
@@ -227,7 +234,6 @@ if [[ -n "${PROCESS_TO_HEALTHCHECK[$ENTRYPOINT_PROCESS]}" ]]; then
     eval "${PROCESS_TO_HEALTHCHECK[$ENTRYPOINT_PROCESS]}"
     exit $?
 else
-    # When 
     # Determine the process name or script to check health
     if [[ -n "${SCRIPT_TO_BINARY_MAP[$ENTRYPOINT_PROCESS]}" ]]; then
         process="${SCRIPT_TO_BINARY_MAP[$ENTRYPOINT_PROCESS]}"
