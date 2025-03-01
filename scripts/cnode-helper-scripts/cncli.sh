@@ -793,7 +793,8 @@ cncliPTsendslots() {
     leaderlog_cnt=$(sqlite3 "${CNCLI_DB}" "SELECT COUNT(*) FROM slots WHERE epoch=${epochnum} and pool_id='${POOL_ID}';")
     [[ ${leaderlog_cnt} -eq 0 ]] && echo "ERROR: no leaderlogs for epoch ${epochnum} and pool id '${POOL_ID}' found in cncli DB" && continue
     cncli_ptsendslots=$(${CNCLI} sendslots --config "${pt_config}" --db "${CNCLI_DB}" --byron-genesis "${BYRON_GENESIS_JSON}" --shelley-genesis "${GENESIS_JSON}")
-    echo -e "${cncli_ptsendslots}"
+    tmp_status_file="/dev/shm/cncli_ptsendslots.status" # store status in a ram-file for healthcheck.sh to read at a later time
+    echo -e "${cncli_ptsendslots}" | tee "${tmp_status_file}"
     if [[ $(jq -r '.status //empty' <<< "${cncli_ptsendslots}" 2>/dev/null) = "error" ]]; then continue; fi
     echo "Slots for epoch ${epochnum} successfully sent to PoolTool for pool id '${POOL_ID}' !"
     sendslots_epoch=${epochnum}
