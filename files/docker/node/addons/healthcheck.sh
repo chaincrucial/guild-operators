@@ -139,6 +139,7 @@ check_cncli_sendslots() {
         | jq -r .status
 
         if [[ "$cncli_status" == "ok" ]]; then
+            # Will later add checks for required variables. e.g... $POOLTOOL_API_KEY, $CARDANO_POOL_TICKER
             echo "cncli status is 'ok', indicating readiness to send slots to PoolTool"
             return 0
         else
