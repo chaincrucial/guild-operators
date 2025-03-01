@@ -37,15 +37,19 @@ check_cncli() {
     cncli_pid=$(pgrep -f "${ENTRYPOINT_PROCESS}")
     cncli_subcmd=$(ps -p "${cncli_pid}" -o cmd= | awk '{print $NF}')
 
-    case "${cncli_subcmd}" in
-        sync )
-            check_cncli_db ;;
-        ptsendtip )
-            check_cncli_sendtip ;;
-        * )
-            echo "Error: unknown cncli.sh subcommand: \"${cncli_subcmd}\"" >&2
-            return 1 ;;
-    esac
+    if [[ "${cncli_subcmd}" != "ptsendtip" ]]; then
+        if check_cncli_db ; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        if check_cncli_sendtip; then
+            return 0
+        else
+            return 1
+        fi
+    fi
 }
 
 
