@@ -118,15 +118,6 @@ check_cncli_sendtip() {
 
 # Function to check cncli sendslots
 check_cncli_sendslots() {
-    CNCLI=$(which cncli)
-
-    # Get the status of cncli
-    cncli_status=$CNCLI status \
-        --byron-genesis /opt/cardano/cnode/files/byron-genesis.json \
-        --shelley-genesis /opt/cardano/cnode/files/shelley-genesis.json \
-        --db /opt/cardano/cnode/guild-db/cncli/cncli.db \
-        | jq -r .status
-
     # Temp file which stores the status of the last cncli_ptsendslots command
     tmp_status_file="/dev/shm/cncli_ptsendslots.status"
     # If the temp file exists, check the status of the last cncli_ptsendslots command
@@ -140,6 +131,13 @@ check_cncli_sendslots() {
         fi
     # If the temp file does not exist, check the readiness of cncli to send slots
     else
+        CNCLI=$(which cncli)
+        cncli_status=$CNCLI status \
+        --byron-genesis /opt/cardano/cnode/files/byron-genesis.json \
+        --shelley-genesis /opt/cardano/cnode/files/shelley-genesis.json \
+        --db /opt/cardano/cnode/guild-db/cncli/cncli.db \
+        | jq -r .status
+
         if [[ "$cncli_status" == "ok" ]]; then
             echo "cncli status is 'ok', indicating readiness to send slots to PoolTool"
             return 0
