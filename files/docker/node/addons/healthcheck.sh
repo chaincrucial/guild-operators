@@ -41,8 +41,6 @@ check_cncli() {
     cncli_subcmd=$(ps -p "${cncli_pid}" -o cmd= | awk '{print $NF}')
 
     case "${cncli_subcmd}" in
-        sync )
-            check_db_sync ;;
         ptsendtip )
             check_cncli_sendtip ;;
         * )
