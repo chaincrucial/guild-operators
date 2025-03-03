@@ -77,7 +77,7 @@ check_cncli_sendtip() {
     # Get the current tip from the node
     first_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # Capture the next output from cncli that is related to Pooltool
-    pt_log_entry=$(timeout $CNCLI_SENDTIP_LOG_TIMEOUT cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
+    pt_log_entry=$(timeout "$CNCLI_SENDTIP_LOG_TIMEOUT" cat /proc/$process_id/fd/1 | grep --line-buffered "Pooltool" | head -n 1)
     # Get the current tip again
     second_tip=$($CCLI query tip --testnet-magic ${NWMAGIC} | jq .block)
     # If no output was captured...
@@ -96,11 +96,11 @@ check_cncli_sendtip() {
     json_failure_status='.*"success":false.*'
 
     # Check if the json success message exists in the captured log
-    if echo "$pt_log_entry" | grep -q $json_success_status; then
+    if echo "$pt_log_entry" | grep -q "$json_success_status"; then
         echo "Healthy: Tip sent to Pooltool. (Current tip = $second_tip)."
         return 0  # Return 0 if the success message is found
     # Check if the json failure message exists in the captured log
-    elif echo "$pt_log_entry" | grep -q $json_failure_status; then
+    elif echo "$pt_log_entry" | grep -q "$json_failure_status"; then
         failure_message=$(echo "$pt_log_entry" | grep -oP '"message":"\K[^"]+')
         echo "Failed to send tip. (Current tip = $second_tip). $failure_message"
         return 1  # Return 1 if the failure message is found
