@@ -7,13 +7,13 @@
 ######################################
 
 ENTRYPOINT_PROCESS="${ENTRYPOINT_PROCESS:-cnode.sh}"            # Get the script from ENTRYPOINT_PROCESS or default to "cnode.sh" if not set
-HEALTHCHECK_CPU_THRESHOLD="${HEALTHCHECK_CPU_THRESHOLD:-80}"    # The CPU threshold to warn about if the sidecar process exceeds this for more than 60 seconds, defaults to 80%.
+HEALTHCHECK_CPU_THRESHOLD="${HEALTHCHECK_CPU_THRESHOLD:-80}"    # The CPU threshold to warn about if the sidecar process exceeds this for more than 60 seconds, defaults to 80%
 HEALTHCHECK_RETRIES="${HEALTHCHECK_RETRIES:-20}"                # The number of retries if tip is not incrementing, or cpu usage is over the threshold
 HEALTHCHECK_RETRY_WAIT="${HEALTHCHECK_RETRY_WAIT:-3}"           # The time (in seconds) to wait between retries
 NODE_ALLOWED_DRIFT="${NODE_ALLOWED_DRIFT:-6}"                   # The allowed drift in blocks for the node to be considered in sync
 DB_SYNC_ALLOWED_DRIFT="${DB_SYNC_ALLOWED_DRIFT:-3600}"          # The allowed drift in seconds for the DB to be considered in sync
 CNCLI_DB_ALLOWED_DRIFT="${CNCLI_DB_ALLOWED_DRIFT:-300}"         # The allowed drift in slots for the CNCLI DB to be considered in sync
-CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capturing timeout (should one second be lower than container healthcheck '--timeout', which defaults to 120)
+CNCLI_SENDTIP_LOG_TIMEOUT="${CNCLI_SENDTIP_LOG_TIMEOUT:-119}"   # log capture timeout (should be one second lower than container healthcheck '--timeout', which defaults to 120)
 CNCLI_SENDTIP_ALLOWED_DRIFT="${CNCLI_SENDTIP_ALLOWED_DRIFT:-3}" # The allowable difference of the tip moving before it's sent to Pooltool. (Not every tip progression is sent to Pooltool)
 
 ######################################
@@ -35,6 +35,8 @@ PROCESS_TO_HEALTHCHECK=(
 )
 
 # FUNCTIONS
+
+# Function to start the relevant health check based on the subcommand of cncli.sh
 check_cncli() {
     cncli_pid=$(pgrep -f "${ENTRYPOINT_PROCESS}")
     cncli_subcmd=$(ps -p "${cncli_pid}" -o cmd= | awk '{print $NF}')
@@ -52,7 +54,7 @@ check_cncli() {
     esac
 }
 
-
+# Function to check if the cncli sqlite db is in sync with the node
 check_cncli_db() {
     CCLI=$(which cardano-cli)
     SQLITE=$(which sqlite3)
@@ -67,7 +69,6 @@ check_cncli_db() {
         return 1
     fi
 }
-
 
 # Function to check if the tip is successfully being sent to Pooltool
 check_cncli_sendtip() {
@@ -166,8 +167,8 @@ check_cncli_sendslots() {
     fi
 }
 
+# Check if the Postgres DB is in sync
 check_db_sync() {
-    # Check if the DB is in sync
     [[ -z "${PGPASSFILE}" ]] && PGPASSFILE="${CNODE_HOME}/priv/.pgpass"
     if [[ ! -f "${PGPASSFILE}" ]]; then
         echo "ERROR: The PGPASSFILE (${PGPASSFILE}) not found, please ensure you've followed the instructions on guild-operators website!" && exit 1
@@ -188,7 +189,6 @@ check_db_sync() {
         return 1
     fi
 }
-
 
 # Function to check if the node is running and is on tip
 check_node() {
@@ -268,7 +268,6 @@ check_process() {
     return 1  # Return 1 if retries are exhausted
 }
 
-
 # Function to check if the tip is progressing or within the allowed drift.
 # FIRST_TIP: The first tip to compare
 # SECOND_TIP: The second tip to compare
@@ -277,7 +276,6 @@ check_process() {
 #                      tips. This is useful when the tip can move backwards, like with API calls.
 # Returns 0 if the diff of the second tip minus the first tip is between 0 and the allowed drift.
 # Returns 1 if the diff is outside the allowed drift.
-
 check_tip() {
     FIRST_TIP=$1
     SECOND_TIP=$2
@@ -356,12 +354,11 @@ if [[ -n "${PROCESS_TO_HEALTHCHECK[$ENTRYPOINT_PROCESS]}" ]]; then
     eval "${PROCESS_TO_HEALTHCHECK[$ENTRYPOINT_PROCESS]}"
     exit $?
 else
-    # When 
     # Determine the process name or script to check health
     if [[ -n "${SCRIPT_TO_BINARY_MAP[$ENTRYPOINT_PROCESS]}" ]]; then
         process="${SCRIPT_TO_BINARY_MAP[$ENTRYPOINT_PROCESS]}"
     fi
-    echo "Checking health for process: $process"
+    echo "Checking health for process: $process."
     check_process "$process" "$HEALTHCHECK_CPU_THRESHOLD"
     exit $?
 fi
