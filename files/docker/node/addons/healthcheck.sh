@@ -25,15 +25,6 @@ CNCLI_SENDTIP_ALLOWED_DRIFT="${CNCLI_SENDTIP_ALLOWED_DRIFT:-3}" # The allowable 
 [[ ! -f "${PARENT}"/env ]] && echo -e "\nCommon env file missing in \"${PARENT}\", please ensure latest guild-deploy.sh was run and this script is being run from ${CNODE_HOME}/scripts folder! \n" && exit 1
 . "${PARENT}"/env offline
 
-if [[ -z "${KOIOS_API_HEADERS[*]}" ]] ; then
-    if [[ -n "${KOIOS_API_TOKEN}" ]] ; then
-        KOIOS_API_HEADERS=(-H "'Authorization: Bearer ${KOIOS_API_TOKEN}'")
-    else
-        KOIOS_API_HEADERS=()
-    fi
-fi
-
-
 # Define a mapping of scripts to their corresponding health check functions
 declare -A PROCESS_TO_HEALTHCHECK
 PROCESS_TO_HEALTHCHECK=(
@@ -174,7 +165,18 @@ check_node() {
             return 1
         fi
     else
-        SECOND=$($CURL -s "${KOIOS_API_HEADERS[@]}" "${URL}" | $JQ '.[0].block_no')
+    # Query the Koios API and check if the response is valid
+    KOIOS_RESPONSE=$(${CURL} -s ${KOIOS_API_TOKEN:+-H "Authorization: Bearer ${KOIOS_API_TOKEN}"} ${URL})
+    if ! echo "${KOIOS_RESPONSE}" | $JQ . &>/dev/null; then
+        echo "Error. Koios API query output: \"${KOIOS_RESPONSE}\""
+        return 1
+    else
+        SECOND=$(echo "${KOIOS_RESPONSE}" | $JQ '.[0].block_no')
+        if ! [[ "$SECOND" =~ ^[0-9]+$ ]]; then
+            echo "Error. Failed to get valid block height from Koios API"
+            return 1
+        fi
+    fi
 
         for (( CHECK=0; CHECK<=HEALTHCHECK_RETRIES; CHECK++ )); do
             # Set BIDIRECTIONAL_DRIFT to 1 since using an API call
