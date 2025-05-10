@@ -39,19 +39,17 @@ check_cncli() {
     cncli_pid=$(pgrep -f "${ENTRYPOINT_PROCESS}")
     cncli_subcmd=$(ps -p "${cncli_pid}" -o cmd= | awk '{print $NF}')
 
-    if [[ "${cncli_subcmd}" != "ptsendtip" ]]; then
-        if check_cncli_db ; then
-            return 0
-        else
-            return 1
-        fi
-    else
-        if check_cncli_sendtip; then
-            return 0
-        else
-            return 1
-        fi
-    fi
+    case "${cncli_subcmd}" in
+    ptsendtip)
+        check_cncli_sendtip
+        ;;
+    ptsendslots)
+        check_cncli_sendslots
+        ;;
+    *)
+        check_cncli_db
+        ;;
+    esac
 }
 
 
@@ -117,6 +115,56 @@ check_cncli_sendtip() {
     fi
 }
 
+# Function to check if the cncli sendslots process can access the required variables and files
+check_cncli_sendslots() {
+    SQLITE=$(which sqlite3)
+    CNCLI=$(which cncli)
+    # Check that the "cncli.sh ptsendslots" process is running
+    if ! pgrep -f "cncli.sh ptsendslots" >/dev/null; then
+        echo "Error: sendslots process is not running"
+        return 1
+    fi
+    # Check $PT_API_KEY is available and valid
+    if [[ -z "${PT_API_KEY}" ]] || [[ ! "${PT_API_KEY}" =~ ^[a-z0-9-]+$ ]]; then
+        echo "Error: PT_API_KEY is not set or not valid (must be lowercase alphanumeric and hyphen chars only)"
+        return 1
+    fi
+    # Check $POOL_TICKER is available and valid
+    if [[ -z "${POOL_TICKER}" ]] || [[ ! "${POOL_TICKER}" =~ ^[A-Z0-9]{3,5}$ ]]; then
+        echo "Error: POOL_TICKER is not set or not valid (must be 3-5 characters in length, A-Z and 0-9 only)"
+        return 1
+    fi
+    # Check that CNCLI_DB is available and readable
+    if [ -z "${CNCLI_DB}" ]; then
+        CNCLI_DB="${CNODE_HOME}/guild-db/cncli/cncli.db"
+    fi
+    if [[ ! -f "${CNCLI_DB}" ]]; then
+        echo "Error: CNCLI_DB file does not exist: ${CNCLI_DB}"
+        return 1
+    fi
+    if [[ ! -r "${CNCLI_DB}" ]]; then
+        echo "Error: CNCLI_DB is not readable: ${CNCLI_DB}"
+        return 1
+    fi
+    # Verify database can be queried
+    if ! timeout 10 "${SQLITE}" "${CNCLI_DB}" ".exit"; then
+        echo "Error: Cannot query CNCLI_DB: ${CNCLI_DB}"
+        return 1
+    fi
+    # Check cncli status
+    cncli_status=$(${CNCLI} status \
+        --byron-genesis /opt/cardano/cnode/files/byron-genesis.json \
+        --shelley-genesis /opt/cardano/cnode/files/shelley-genesis.json \
+        --db "${CNCLI_DB}" |
+        jq -r .status)
+    if [[ "$cncli_status" == "ok" ]]; then
+        echo "Ready to send slots to PoolTool at the beginning of next epoch"
+        return 0
+    else
+        echo "Error: cncli status is not 'ok' - unable to send slots to PoolTool"
+        return 1
+    fi
+}
 
 check_db_sync() {
     # Check if the DB is in sync
