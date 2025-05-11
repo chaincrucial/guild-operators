@@ -116,10 +116,64 @@ check_cncli_sendtip() {
     fi
 }
 
-# Function to check if the cncli sendslots process can access the required variables and files
-check_cncli_sendslots() {
-    SQLITE=$(which sqlite3)
+# Function to check if the cncli status is ok. (Stdout is "ok" if status="ok", error message if not)
+check_cncli_status() {
     CNCLI=$(which cncli)
+    SQLITE=$(which sqlite3)
+    # Get the required genesis files from the config file
+    declare -A genesis_files
+    for genesis_file in "ByronGenesisFile" "ShelleyGenesisFile"; do
+        if [[ "${CONFIG##*.}" = "yaml" ]]; then
+            [[ $(grep "${genesis_file}.*\.json" "${CONFIG}") =~ ${genesis_file}:.\"(.+\.json)\" ]] && genesis_files["${genesis_file}"]="${BASH_REMATCH[1]}"
+        elif [[ "${CONFIG##*.}" = "json" ]]; then
+            genesis_files["${genesis_file}"]=$(jq -r ".${genesis_file}" "${CONFIG}")
+        fi
+    done
+    # Check if the genesis path has been retried from the config file and that the files exist
+    genesis_error_message="genesis file is either not defined in the config file or the file does not exist"
+    if [[ -n "${genesis_files[ByronGenesisFile]}" ]] && [[ ! -f "${genesis_files[ByronGenesisFile]}" ]]; then
+        echo "Error: Byron \"${genesis_error_message}\": ${genesis_files[ByronGenesisFile]}"
+        return 1
+    fi
+    if [[ -z "${PT_API_KEY}" ]] || [[ ! "${PT_API_KEY}" =~ ^[a-z0-9-]+$ ]]; then
+        echo "Error: PT_API_KEY is not set or not valid (must be lowercase alphanumeric and hyphen chars only)"
+    if [[ -n "${genesis_files[ShelleyGenesisFile]}" ]] && [[ ! -f "${genesis_files[ShelleyGenesisFile]}" ]]; then
+        echo "Error: Shelley \"${genesis_error_message}\": ${genesis_files[ShelleyGenesisFile]}"
+        return 1
+    fi
+        return 1
+    fi
+    # If CNCLI_DB is not set, set it to the default path
+    if [[ -z "${CNCLI_DB}" ]]; then
+        CNCLI_DB="${CNODE_HOME}/guild-db/cncli/cncli.db"
+    fi
+    # Check that CNCLI_DB file is available and readable
+    if [[ ! -f "${CNCLI_DB}" || ! -r "${CNCLI_DB}" ]]; then
+        echo "Error: CNCLI_DB file does not exist or is not readable: ${CNCLI_DB}"
+        return 1
+    fi
+    # Verify database can be queried with SQLite
+    if ! timeout 10 "${SQLITE}" "${CNCLI_DB}" ".exit"; then
+        echo "Error: Cannot query CNCLI_DB: ${CNCLI_DB}"
+        return 1
+    fi
+    # Check cncli status
+    cncli_status=$(${CNCLI} status \
+        --byron-genesis "${genesis_files[ByronGenesisFile]}" \
+        --shelley-genesis "${genesis_files[ShelleyGenesisFile]}" \
+        --db "${CNCLI_DB}" |
+        jq -r .status)
+    if [[ $? -eq 0 ]]; then
+        echo "$cncli_status"
+        return 0
+    else
+        echo "Error: Status check failed when running \"cncli status\" command"
+        return 1
+    fi
+}
+
+# Function to check if the cncli sendslots process is running
+check_cncli_sendslots() {
     # Check that the "cncli.sh ptsendslots" process is running
     if ! pgrep -f "cncli.sh ptsendslots" >/dev/null; then
         echo "Error: sendslots process is not running"
@@ -135,35 +189,13 @@ check_cncli_sendslots() {
         echo "Error: POOL_TICKER is not set or not valid (must be 3-5 characters in length, A-Z and 0-9 only)"
         return 1
     fi
-    # Check that CNCLI_DB is available and readable
-    if [ -z "${CNCLI_DB}" ]; then
-        CNCLI_DB="${CNODE_HOME}/guild-db/cncli/cncli.db"
-    fi
-    if [[ ! -f "${CNCLI_DB}" ]]; then
-        echo "Error: CNCLI_DB file does not exist: ${CNCLI_DB}"
-        return 1
-    fi
-    if [[ ! -r "${CNCLI_DB}" ]]; then
-        echo "Error: CNCLI_DB is not readable: ${CNCLI_DB}"
-        return 1
-    fi
-    # Verify database can be queried
-    if ! timeout 10 "${SQLITE}" "${CNCLI_DB}" ".exit"; then
-        echo "Error: Cannot query CNCLI_DB: ${CNCLI_DB}"
-        return 1
-    fi
     # Check cncli status
-    cncli_status=$(${CNCLI} status \
-        --byron-genesis /opt/cardano/cnode/files/byron-genesis.json \
-        --shelley-genesis /opt/cardano/cnode/files/shelley-genesis.json \
-        --db "${CNCLI_DB}" |
-        jq -r .status)
-    if [[ "$cncli_status" == "ok" ]]; then
+    if [[ "$(check_cncli_status)" != "ok" ]]; then
+        echo "Error when checking cncli status: \"${cncli_status}\""
+        return 1
+    else
         echo "Ready to send slots to PoolTool at the beginning of next epoch"
         return 0
-    else
-        echo "Error: cncli status is not 'ok' - unable to send slots to PoolTool"
-        return 1
     fi
 }
 
