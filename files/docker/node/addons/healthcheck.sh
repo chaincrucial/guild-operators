@@ -120,7 +120,7 @@ check_cncli_sendtip() {
 check_cncli_status() {
     CNCLI=$(which cncli)
     SQLITE=$(which sqlite3)
-    # Get the required genesis files from the config file
+    # Get the required genesis file paths from the config file
     declare -A genesis_files
     for genesis_file in "ByronGenesisFile" "ShelleyGenesisFile"; do
         if [[ "${CONFIG##*.}" = "yaml" ]]; then
@@ -129,25 +129,18 @@ check_cncli_status() {
             genesis_files["${genesis_file}"]=$(jq -r ".${genesis_file}" "${CONFIG}")
         fi
     done
-    # Check if the genesis path has been retried from the config file and that the files exist
-    genesis_error_message="genesis file is either not defined in the config file or the file does not exist"
-    if [[ -n "${genesis_files[ByronGenesisFile]}" ]] && [[ ! -f "${genesis_files[ByronGenesisFile]}" ]]; then
-        echo "Error: Byron \"${genesis_error_message}\": ${genesis_files[ByronGenesisFile]}"
-        return 1
-    fi
-    if [[ -z "${PT_API_KEY}" ]] || [[ ! "${PT_API_KEY}" =~ ^[a-z0-9-]+$ ]]; then
-        echo "Error: PT_API_KEY is not set or not valid (must be lowercase alphanumeric and hyphen chars only)"
-    if [[ -n "${genesis_files[ShelleyGenesisFile]}" ]] && [[ ! -f "${genesis_files[ShelleyGenesisFile]}" ]]; then
-        echo "Error: Shelley \"${genesis_error_message}\": ${genesis_files[ShelleyGenesisFile]}"
-        return 1
-    fi
-        return 1
-    fi
-    # If CNCLI_DB is not set, set it to the default path
+    # Check if the genesis path has been retrieved from the config file and that the files exist
+    for genesis_type in "Byron" "Shelley"; do
+        if [[ -n "${genesis_files[${genesis_type}GenesisFile]}" ]] && [[ ! -f "${genesis_files[${genesis_type}GenesisFile]}" ]]; then
+            genesis_error_message="\"${genesis_type}\" genesis file is either not defined in the config file or the genesis file does not exist"
+            echo " \"${genesis_error_message}\": ${genesis_files[${genesis_type}GenesisFile]}"
+            return 1
+        fi
+    done
+    # Check that CNCLI_DB file is available and readable
     if [[ -z "${CNCLI_DB}" ]]; then
         CNCLI_DB="${CNODE_HOME}/guild-db/cncli/cncli.db"
     fi
-    # Check that CNCLI_DB file is available and readable
     if [[ ! -f "${CNCLI_DB}" || ! -r "${CNCLI_DB}" ]]; then
         echo "Error: CNCLI_DB file does not exist or is not readable: ${CNCLI_DB}"
         return 1
