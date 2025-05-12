@@ -121,7 +121,7 @@ check_cncli_status() {
     CNCLI=$(which cncli)
     SQLITE=$(which sqlite3)
     # Get the required genesis file paths from the config file
-    declare -A genesis_files
+    local -A genesis_files
     for genesis_file in "ByronGenesisFile" "ShelleyGenesisFile"; do
         if [[ "${CONFIG##*.}" = "yaml" ]]; then
             [[ $(grep "${genesis_file}.*\.json" "${CONFIG}") =~ ${genesis_file}:.\"(.+\.json)\" ]] && genesis_files["${genesis_file}"]="${BASH_REMATCH[1]}"
@@ -151,6 +151,7 @@ check_cncli_status() {
         return 1
     fi
     # Check cncli status
+    local cncli_status
     cncli_status=$(${CNCLI} status \
         --byron-genesis "${genesis_files[ByronGenesisFile]}" \
         --shelley-genesis "${genesis_files[ShelleyGenesisFile]}" \
@@ -183,7 +184,9 @@ check_cncli_sendslots() {
         return 1
     fi
     # Check cncli status
-    if [[ "$(check_cncli_status)" != "ok" ]]; then
+    local cncli_status
+    cncli_status="$(check_cncli_status)"
+    if [[ "${cncli_status}" != "ok" ]]; then
         echo "Error when checking cncli status: \"${cncli_status}\""
         return 1
     else
