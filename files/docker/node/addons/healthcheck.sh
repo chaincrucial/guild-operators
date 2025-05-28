@@ -243,7 +243,7 @@ check_node() {
         fi
     else
     # Query the Koios API and check if the response is valid
-    KOIOS_RESPONSE=$(${CURL} -s ${KOIOS_API_TOKEN:+-H "Authorization: Bearer ${KOIOS_API_TOKEN}"} ${URL})
+    KOIOS_RESPONSE=$(${CURL} -s "${KOIOS_API_HEADERS[@]}" "${URL}")
     if ! echo "${KOIOS_RESPONSE}" | $JQ . &>/dev/null; then
         echo "Error. Koios API query output: \"${KOIOS_RESPONSE}\""
         return 1
