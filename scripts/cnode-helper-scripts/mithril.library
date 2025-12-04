@@ -31,7 +31,6 @@ MITHRILBIN="${HOME}"/.local/bin/$(basename "${0::-3}")
 [[ "${SUDO}" = 'Y' && $(id -u) -eq 0 ]] && err_exit "Please run as non-root user."
 
 ### DEBUG
-echo "DEBUG: Mithril Library - Release Var Value: ${RELEASE}"
 echo "DEBUG: Mithril Library - Network Var Value: ${NETWORK_NAME}"
 echo "DEBUG: Mithril Library - Ancillary Verification Key URL: https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/ancillary.vkey"
 echo "DEBUG: Mithril Library - Ancillary Verification Key Value: $(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/ancillary.vkey)"
@@ -181,6 +180,10 @@ set_defaults() {
   fi
   AGGREGATOR_ENDPOINT=https://aggregator.${RELEASE}-${NETWORK_NAME,,}.api.mithril.network/aggregator
   GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/genesis.vkey)
+  ANCILLARY_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/ancillary.vkey)
+  echo "DEBUG: Mithril Library - Release Var Value: ${RELEASE}"
+  echo "DEBUG: ANCILLARY_VERIFICATION_KEY Var value: $ANCILLARY_VERIFICATION_KEY"
+                                      
 }
 
 set_env_file_ownership() {
@@ -326,8 +329,8 @@ cleanup_db_directory() {
 download_snapshot() {
   if [[ "${DOWNLOAD_SNAPSHOT}" == "Y" ]]; then
     echo "INFO: Downloading latest mithril snapshot (Includes ledger snapshot for fast node bootstrap).."
+    echo "DEBUG: Executing Command: ${MITHRILBIN} -v --aggregator-endpoint ${AGGREGATOR_ENDPOINT} cardano-db download --ancillary-verification-key ${ANCILLARY_VERIFICATION_KEY} --download-dir $(dirname ${DB_DIRECTORY}) --genesis-verification-key ${GENESIS_VERIFICATION_KEY} --include-ancillary ${SNAPSHOT_DIGEST}"
     trap 'cleanup_db_directory' INT
-    echo "Executing Command: ${MITHRILBIN} -v --aggregator-endpoint ${AGGREGATOR_ENDPOINT} cardano-db download --ancillary-verification-key ${ANCILLARY_VERIFICATION_KEY} --download-dir $(dirname ${DB_DIRECTORY}) --genesis-verification-key ${GENESIS_VERIFICATION_KEY} --include-ancillary ${SNAPSHOT_DIGEST}"
     if ! "${MITHRILBIN}" -v --aggregator-endpoint ${AGGREGATOR_ENDPOINT} cardano-db download --ancillary-verification-key ${ANCILLARY_VERIFICATION_KEY} --download-dir "$(dirname ${DB_DIRECTORY})" --genesis-verification-key ${GENESIS_VERIFICATION_KEY} --include-ancillary ${SNAPSHOT_DIGEST} ; then
       cleanup_db_directory
       exit 1
