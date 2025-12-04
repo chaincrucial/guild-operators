@@ -30,6 +30,12 @@ MITHRILBIN="${HOME}"/.local/bin/$(basename "${0::-3}")
 [[ "${SUDO}" = 'Y' ]] && sudo="sudo" || sudo=""
 [[ "${SUDO}" = 'Y' && $(id -u) -eq 0 ]] && err_exit "Please run as non-root user."
 
+### DEBUG
+echo "DEBUG: Mithril Library - Release Var Value: ${RELEASE}"
+echo "DEBUG: Mithril Library - Network Var Value: ${NETWORK_NAME}"
+echo "DEBUG: Mithril Library - Ancillary Verification Key URL: https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/ancillary.vkey"
+echo "DEBUG: Mithril Library - Ancillary Verification Key Value: $(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/ancillary.vkey)"
+
 check_mithril_environment_file_exists() {
  local env_file="${MITHRIL_HOME}/mithril.env"
 
