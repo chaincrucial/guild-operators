@@ -279,6 +279,9 @@ update_mithril_environment_for_client() {
 		GENESIS_VERIFICATION_KEY=$(curl -s https://raw.githubusercontent.com/input-output-hk/mithril/main/mithril-infra/configuration/${RELEASE}-${NETWORK_NAME,,}/genesis.vkey)
 		SNAPSHOT_DIGEST=latest
 		EOF"
+
+echo -e "******************************************\n The values inside the mithril.env file are: "
+cat ${MITHRIL_HOME}/mithril.env
 }
 
 ############################
@@ -318,6 +321,7 @@ download_snapshot() {
   if [[ "${DOWNLOAD_SNAPSHOT}" == "Y" ]]; then
     echo "INFO: Downloading latest mithril snapshot (Includes ledger snapshot for fast node bootstrap).."
     trap 'cleanup_db_directory' INT
+    echo "Executing Command: ${MITHRILBIN} -v --aggregator-endpoint ${AGGREGATOR_ENDPOINT} cardano-db download --ancillary-verification-key ${ANCILLARY_VERIFICATION_KEY} --download-dir $(dirname ${DB_DIRECTORY}) --genesis-verification-key ${GENESIS_VERIFICATION_KEY} --include-ancillary ${SNAPSHOT_DIGEST}"
     if ! "${MITHRILBIN}" -v --aggregator-endpoint ${AGGREGATOR_ENDPOINT} cardano-db download --ancillary-verification-key ${ANCILLARY_VERIFICATION_KEY} --download-dir "$(dirname ${DB_DIRECTORY})" --genesis-verification-key ${GENESIS_VERIFICATION_KEY} --include-ancillary ${SNAPSHOT_DIGEST} ; then
       cleanup_db_directory
       exit 1
@@ -735,6 +739,8 @@ update_mithril_environment_for_signer() {
 		PARTY_ID=$(cat ${POOL_DIR}/${POOL_ID_FILENAME}-bech32)
 		SNAPSHOT_DIGEST=latest
 		EOF"
+echo -e "******************************************\n The values inside the mithril.env file are: "
+cat ${MITHRIL_HOME}/mithril.env
 
   if [[ "${ENABLE_RELAY_ENDPOINT}" == "y" ]]; then
     ${sudo} bash -c "echo RELAY_ENDPOINT=http://${RELAY_ENDPOINT_IP}:${RELAY_PORT} >> ${MITHRIL_HOME}/mithril.env"
